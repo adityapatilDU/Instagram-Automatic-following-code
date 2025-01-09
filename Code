@@ -1,0 +1,74 @@
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
+import pandas as pd
+import time
+import random
+
+# Replace with the path to your ChromeDriver
+chrome_driver_path = "C:/Users/user/Downloads/chromedriver-win64/chromedriver-win64/chromedriver.exe"
+
+# Instagram credentials
+username = "Name"  # Replace with your Instagram username
+password = "password"  # Replace with your Instagram password
+
+# Path to the Excel file
+excel_file_path = r"path"
+
+# Load the usernames from the Excel file
+df = pd.read_excel(excel_file_path, usecols="B", header=None, engine="openpyxl")
+usernames = df.iloc[1:10000, 0].tolist()  # Extract the usernames from row 2 to 10000 (B2 to B10000)
+
+# Initialize the Chrome driver
+service = Service(chrome_driver_path)
+driver = webdriver.Chrome(executable_path=chrome_driver_path)
+
+try:
+    # Open Instagram login page
+    driver.get("https://www.instagram.com/accounts/login/")
+    time.sleep(3)  # Wait for the page to load
+
+    # Log in to Instagram
+    username_field = driver.find_element(By.NAME, "username")
+    username_field.send_keys(username)
+    password_field = driver.find_element(By.NAME, "password")
+    password_field.send_keys(password)
+    password_field.send_keys(Keys.RETURN)
+    time.sleep(5)  # Wait for login to complete
+
+    user_count = 0  # Counter to track the number of users processed
+
+    # Iterate over each target username from the Excel sheet and follow them
+    for target_username in usernames:
+        if isinstance(target_username, str):  # Check if the username is a valid string
+            # Navigate to the target profile
+            driver.get(f"https://www.instagram.com/{target_username}/")
+            time.sleep(3)  # Wait for the profile to load
+
+            try:
+                # Locate the 'Follow' button using the correct CSS selector
+                follow_button = driver.find_element(By.CSS_SELECTOR, "button._acan._acap._acas._aj1-._ap30")
+                if follow_button.text.lower() == 'follow':  # Check if it's showing 'Follow'
+                    follow_button.click()
+                    print(f"Followed {target_username}.")
+                else:
+                    print(f"Already following {target_username}.")
+
+                user_count += 1  # Increment the counter after each user
+
+                # Random pause between 2 to 6 seconds before visiting the next profile
+                time.sleep(random.randint(2, 6))
+
+                # Every 10 users, take a 10-second break
+                if user_count % 10 == 0:
+                    print("Taking a 10-second break...")
+                    time.sleep(10)  # 10-second break after every 10 users
+
+            except Exception as e:
+                print(f"Could not follow {target_username}: {e}")
+        else:
+            print(f"Skipping invalid username: {target_username}")
+
+finally:
+    driver.quit()
